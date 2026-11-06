@@ -2,10 +2,10 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 st.set_page_config(
-    page_title="Flappy Bird Pro - Đồ Họa Cải Tiến", page_icon="🐦", layout="centered"
+    page_title="Flappy Bird Pro - Âm Thanh Nhẹ Nhàng", page_icon="🐦", layout="centered"
 )
 
-st.title("🐦 Flappy Bird - Phiên Bản Đồ Họa Nâng Cao")
+st.title("🐦 Flappy Bird - Đã Giảm Âm Lượng Tiếng Thua")
 st.caption(
     "💡 **Điện thoại / Máy tính:** Chạm tay hoặc Click chuột trực tiếp vào màn"
     " hình game để bay / bắt đầu!"
@@ -89,10 +89,10 @@ game_html = """
         let gameState = "MENU"; // MENU, PLAYING, GAMEOVER
 
         const difficulties = [
-            { name: "Dễ", gravity: 0.22, jump: -5.0, speed: 1.6, gap: 175, interval: 120 },
-            { name: "Thường", gravity: 0.28, jump: -5.5, speed: 2.0, gap: 155, interval: 105 },
-            { name: "Khó", gravity: 0.33, jump: -5.9, speed: 2.5, gap: 140, interval: 90 },
-            { name: "Siêu Khó", gravity: 0.38, jump: -6.3, speed: 3.0, gap: 125, interval: 80 }
+            { name: "Dễ", gravity: 0.22, jump: -4.8, speed: 1.6, gap: 185, interval: 130 },
+            { name: "Thường", gravity: 0.26, jump: -5.2, speed: 1.9, gap: 170, interval: 115 },
+            { name: "Khó", gravity: 0.30, jump: -5.6, speed: 2.3, gap: 155, interval: 100 },
+            { name: "Siêu Khó", gravity: 0.34, jump: -6.0, speed: 2.7, gap: 140, interval: 90 }
         ];
         let currentDiffIndex = 1;
 
@@ -135,12 +135,13 @@ game_html = """
                 gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
                 osc.start(); osc.stop(audioCtx.currentTime + 0.2);
             } else if (type === 'hit') {
-                osc.type = 'sawtooth';
-                osc.frequency.setValueAtTime(200, audioCtx.currentTime);
-                osc.frequency.linearRampToValueAtTime(80, audioCtx.currentTime + 0.2);
-                gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
-                gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
-                osc.start(); osc.stop(audioCtx.currentTime + 0.2);
+                // Đổi sang âm trầm, êm dịu và nhỏ hơn để không bị ồn
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(60, audioCtx.currentTime + 0.15);
+                gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.15);
             }
         }
 
@@ -191,7 +192,7 @@ game_html = """
             let diff = difficulties[currentDiffIndex];
             pipes.push({
                 x: cvs.width,
-                top: Math.floor(Math.random() * (cvs.height - diff.gap - 100)) + 30,
+                top: Math.floor(Math.random() * (cvs.height - diff.gap - 120)) + 40,
                 passed: false
             });
         }
@@ -205,7 +206,6 @@ game_html = """
                 if (hillX <= -cvs.width) hillX = 0;
             }
 
-            // Vẽ dải đồi phía xa (Parallax background)
             ctx.fillStyle = "#558022";
             for (let i = 0; i < 2; i++) {
                 let currentX = hillX + (i * cvs.width);
@@ -216,19 +216,15 @@ game_html = """
                 ctx.fill();
             }
 
-            // Vẽ mây di chuyển
             ctx.fillStyle = "rgba(255, 255, 255, 0.6)";
             for (let i = 0; i < 2; i++) {
                 let currentX = cloudX + (i * cvs.width);
-                
-                // Mây 1
                 ctx.beginPath();
                 ctx.arc(currentX + 60, 90, 22, 0, Math.PI * 2);
                 ctx.arc(currentX + 80, 85, 30, 0, Math.PI * 2);
                 ctx.arc(currentX + 105, 95, 20, 0, Math.PI * 2);
                 ctx.fill();
 
-                // Mây 2
                 ctx.beginPath();
                 ctx.arc(currentX + 260, 140, 25, 0, Math.PI * 2);
                 ctx.arc(currentX + 285, 130, 35, 0, Math.PI * 2);
@@ -243,7 +239,6 @@ game_html = """
             bird.rotation += (targetRot - bird.rotation) * 0.2;
             ctx.rotate(bird.rotation);
 
-            // Thân chim
             ctx.beginPath();
             ctx.arc(0, 0, bird.radius, 0, Math.PI * 2);
             ctx.fillStyle = "#f8d71c";
@@ -252,7 +247,6 @@ game_html = """
             ctx.strokeStyle = "#222";
             ctx.stroke();
 
-            // Mắt chim
             ctx.beginPath();
             ctx.arc(4, -4, 3.5, 0, Math.PI * 2);
             ctx.fillStyle = "#fff";
@@ -263,7 +257,6 @@ game_html = """
             ctx.fillStyle = "#000";
             ctx.fill();
 
-            // Mỏ chim
             ctx.fillStyle = "#ff5722";
             ctx.beginPath();
             ctx.moveTo(9, -2);
@@ -273,7 +266,6 @@ game_html = """
             ctx.fill();
             ctx.stroke();
 
-            // Cánh chim đập lên xuống theo khung hình (Animation Wing)
             let wingAngle = Math.sin(frameCount * 0.4) * 0.6 - 0.2;
             ctx.save();
             ctx.translate(-3, 2);
@@ -294,7 +286,7 @@ game_html = """
             let diff = difficulties[currentDiffIndex];
             for (let i = 0; i < pipes.length; i++) {
                 let p = pipes[i];
-                let topPipeHeight = p.top;
+                let topHeight = p.top;
                 let bottomY = p.top + diff.gap;
                 let bottomHeight = cvs.height - bottomY - 30;
 
@@ -305,17 +297,19 @@ game_html = """
                 ctx.strokeStyle = pipeBorder;
                 ctx.lineWidth = 2;
 
-                // Ống trên
-                ctx.fillRect(p.x, 0, pipeWidth, topPipeHeight - 20);
-                ctx.strokeRect(p.x, 0, pipeWidth, topPipeHeight - 20);
-                ctx.fillRect(p.x - 3, topPipeHeight - 20, pipeWidth + 6, 20);
-                ctx.strokeRect(p.x - 3, topPipeHeight - 20, pipeWidth + 6, 20);
+                if (topHeight > 20) {
+                    ctx.fillRect(p.x, 0, pipeWidth, topHeight - 20);
+                    ctx.strokeRect(p.x, 0, pipeWidth, topHeight - 20);
+                }
+                ctx.fillRect(p.x - 3, topHeight - 20, pipeWidth + 6, 20);
+                ctx.strokeRect(p.x - 3, topHeight - 20, pipeWidth + 6, 20);
 
-                // Ống dưới
                 ctx.fillRect(p.x - 3, bottomY, pipeWidth + 6, 20);
                 ctx.strokeRect(p.x - 3, bottomY, pipeWidth + 6, 20);
-                ctx.fillRect(p.x, bottomY + 20, pipeWidth, bottomHeight - 20);
-                ctx.strokeRect(p.x, bottomY + 20, pipeWidth, bottomHeight - 20);
+                if (bottomHeight > 20) {
+                    ctx.fillRect(p.x, bottomY + 20, pipeWidth, bottomHeight - 20);
+                    ctx.strokeRect(p.x, bottomY + 20, pipeWidth, bottomHeight - 20);
+                }
 
                 if (gameState === "PLAYING") {
                     p.x -= diff.speed;
@@ -331,7 +325,7 @@ game_html = """
                 if (
                     bird.x + bird.radius - 3 > p.x && 
                     bird.x - bird.radius + 3 < p.x + pipeWidth &&
-                    (bird.y - bird.radius + 3 < topPipeHeight || bird.y + bird.radius - 3 > bottomY)
+                    (bird.y - bird.radius + 3 < topHeight || bird.y + bird.radius - 3 > bottomY)
                 ) {
                     playSound('hit');
                     gameState = "GAMEOVER";
@@ -345,7 +339,7 @@ game_html = """
             if (gameState === "PLAYING" && frameCount % diff.interval === 0) {
                 pipes.push({
                     x: cvs.width,
-                    top: Math.floor(Math.random() * (cvs.height - diff.gap - 100)) + 30,
+                    top: Math.floor(Math.random() * (cvs.height - diff.gap - 120)) + 40,
                     passed: false
                 });
             }
