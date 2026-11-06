@@ -2,15 +2,16 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 st.set_page_config(
-    page_title="Hứng Táo Pro - Nam Châm & Bom Nổ",
+    page_title="Hứng Táo Pro - Chỉ Nổ Khi Hứng Bom",
     page_icon="🍎",
     layout="centered",
 )
 
 st.title("🍎 Game Hứng Táo: Bom Nổ & Nam Châm 🧲")
 st.caption(
-    "💡 **Vật phẩm đặc biệt:**<br>• 🧲 **Nam Châm:** Hút tất cả táo đỏ về giỏ"
-    " trong 5 giây!<br>• 💣 **Quả Bom:** Tránh xa kẻo nổ mất mạng!",
+    "💡 **Luật chơi mới:**<br>• 🍎 **Táo đỏ:** Hứng để tăng điểm. Rơi xuống đất"
+    " **KHÔNG** mất tim!<br>• 💣 **Quả Bom:** Chỉ bị trừ tim khi bạn hứng nhầm"
+    " Bom!<br>• 🧲 **Nam Châm:** Hút toàn bộ táo đỏ về giỏ!",
     unsafe_allow_html=True,
 )
 
@@ -82,9 +83,9 @@ game_html = """
         let gameState = "MENU"; // MENU, PLAYING, GAMEOVER
 
         const difficulties = [
-            { name: "Dễ", initialSpeed: 2.5, spawnRate: 35, maxLives: 4 },
-            { name: "Thường", initialSpeed: 3.3, spawnRate: 25, maxLives: 3 },
-            { name: "Khó", initialSpeed: 4.2, spawnRate: 18, maxLives: 2 }
+            { name: "Dễ", initialSpeed: 2.5, spawnRate: 30, maxLives: 4 },
+            { name: "Thường", initialSpeed: 3.3, spawnRate: 22, maxLives: 3 },
+            { name: "Khó", initialSpeed: 4.2, spawnRate: 15, maxLives: 2 }
         ];
         let currentDiff = 1;
 
@@ -103,7 +104,6 @@ game_html = """
         let lives = 3;
         let frameCount = 0;
 
-        // Trạng thái Nam Châm
         let magnetTimer = 0;
 
         let leftPressed = false;
@@ -132,7 +132,6 @@ game_html = """
                 gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.25);
                 osc.start(); osc.stop(audioCtx.currentTime + 0.25);
             } else if (type === 'explosion') {
-                // Âm thanh Bom nổ trầm êm
                 osc.type = 'sawtooth';
                 osc.frequency.setValueAtTime(180, audioCtx.currentTime);
                 osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.3);
@@ -198,7 +197,6 @@ game_html = """
         }
 
         function createExplosion(x, y) {
-            // Tạo 15 mảnh văng nhỏ khi bom nổ
             for (let i = 0; i < 15; i++) {
                 particles.push({
                     x: x,
@@ -217,9 +215,9 @@ game_html = """
             let currentSpeed = diffConfig.initialSpeed + (score * 0.02);
             let rand = Math.random();
 
-            let type = "APPLE"; // Mặc định là Táo đỏ
-            if (rand < 0.20) type = "BOMB";      // 20% ra Bom
-            else if (rand < 0.26) type = "MAGNET"; // 6% ra Nam Châm
+            let type = "APPLE";
+            if (rand < 0.22) type = "BOMB";        // 22% ra Bom
+            else if (rand < 0.28) type = "MAGNET"; // 6% ra Nam Châm
 
             items.push({
                 x: Math.random() * (cvs.width - 24) + 12,
@@ -239,7 +237,6 @@ game_html = """
             ctx.strokeStyle = magnetTimer > 0 ? "#1f4ba8" : "#5c2c09";
             ctx.stroke();
 
-            // Vẽ ký hiệu Nam châm trên giỏ nếu đang bật hiệu ứng
             if (magnetTimer > 0) {
                 ctx.fillStyle = "#FFF";
                 ctx.font = "bold 13px sans-serif";
@@ -256,17 +253,15 @@ game_html = """
             for (let i = 0; i < items.length; i++) {
                 let item = items[i];
 
-                // Hiệu ứng Nam Châm hút Táo đỏ về giỏ
                 if (magnetTimer > 0 && item.type === "APPLE") {
                     let basketCenterX = basket.x + basket.width / 2;
                     let dx = basketCenterX - item.x;
-                    item.x += dx * 0.08; // Kéo dần táo theo trục X
+                    item.x += dx * 0.09;
                 }
 
                 ctx.beginPath();
 
                 if (item.type === "BOMB") {
-                    // Vẽ Quả Bom
                     ctx.arc(item.x, item.y, item.radius, 0, Math.PI * 2);
                     ctx.fillStyle = "#333";
                     ctx.fill();
@@ -274,7 +269,6 @@ game_html = """
                     ctx.strokeStyle = "#000";
                     ctx.stroke();
 
-                    // Kíp nổ
                     ctx.strokeStyle = "#ff9900";
                     ctx.beginPath();
                     ctx.moveTo(item.x, item.y - item.radius);
@@ -282,14 +276,12 @@ game_html = """
                     ctx.stroke();
 
                 } else if (item.type === "MAGNET") {
-                    // Vẽ Vật phẩm Nam Châm
                     ctx.fillStyle = "#ff3333";
                     ctx.font = "18px sans-serif";
                     ctx.textAlign = "center";
                     ctx.fillText("🧲", item.x, item.y + 6);
 
                 } else {
-                    // Vẽ Táo Đỏ
                     ctx.arc(item.x, item.y, item.radius, 0, Math.PI * 2);
                     ctx.fillStyle = "#ff3333";
                     ctx.fill();
@@ -297,7 +289,6 @@ game_html = """
                     ctx.strokeStyle = "#b30000";
                     ctx.stroke();
 
-                    // Lá xanh
                     ctx.fillStyle = "#2e8b57";
                     ctx.beginPath();
                     ctx.ellipse(item.x + 3, item.y - 12, 4, 2, Math.PI / 4, 0, Math.PI * 2);
@@ -323,7 +314,7 @@ game_html = """
 
                     } else if (item.type === "MAGNET") {
                         playSound('magnet');
-                        magnetTimer = 300; // Khởi tạo 5 giây nam châm (60fps * 5)
+                        magnetTimer = 300; // Nam châm kéo dài 5 giây
 
                     } else { // Táo đỏ
                         playSound('catch');
@@ -336,18 +327,13 @@ game_html = """
                     continue;
                 }
 
-                // Rơi quá màn hình
+                // Rơi quá màn hình: KHÔNG TRỪ MẠNG KHI TÁO RƠI
                 if (item.y - item.radius > cvs.height) {
-                    if (item.type === "APPLE" && magnetTimer <= 0) {
-                        lives--;
-                        if (lives <= 0) gameState = "GAMEOVER";
-                    }
                     items.splice(i, 1);
                     i--;
                 }
             }
 
-            // Sinh vật phẩm dồn dập hơn
             let rate = difficulties[currentDiff].spawnRate;
             if (gameState === "PLAYING" && frameCount % rate === 0) {
                 spawnItem();
@@ -374,14 +360,12 @@ game_html = """
         }
 
         function drawUI() {
-            // Mạng sống
             ctx.fillStyle = "#ff4d4d";
             ctx.font = "bold 18px sans-serif";
             ctx.textAlign = "left";
             let heartStr = "❤️ ".repeat(Math.max(0, lives));
             ctx.fillText(heartStr, 15, 30);
 
-            // Điểm số
             ctx.fillStyle = "#222";
             ctx.font = "bold 20px sans-serif";
             ctx.textAlign = "right";
