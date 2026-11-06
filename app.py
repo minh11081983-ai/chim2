@@ -2,14 +2,15 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 st.set_page_config(
-    page_title="Game Hứng Táo - Streamlit", page_icon="🍎", layout="centered"
+    page_title="Hứng Táo Pro - Nam Châm & Bom Nổ",
+    page_icon="🍎",
+    layout="centered",
 )
 
-st.title("🍎 Game Hứng Táo (Catch the Apples)")
+st.title("🍎 Game Hứng Táo: Bom Nổ & Nam Châm 🧲")
 st.caption(
-    "💡 **Cách chơi:**<br>• **Máy tính:** Dùng phím mũi tên ⬅️ ➡️ hoặc phím A"
-    " / D (hoặc di chuyển chuột).<br>• **Điện thoại:** Vuốt hoặc chạm sang trái /"
-    " phải trên màn hình để di chuyển giỏ!",
+    "💡 **Vật phẩm đặc biệt:**<br>• 🧲 **Nam Châm:** Hút tất cả táo đỏ về giỏ"
+    " trong 5 giây!<br>• 💣 **Quả Bom:** Tránh xa kẻo nổ mất mạng!",
     unsafe_allow_html=True,
 )
 
@@ -81,33 +82,33 @@ game_html = """
         let gameState = "MENU"; // MENU, PLAYING, GAMEOVER
 
         const difficulties = [
-            { name: "Dễ", initialSpeed: 2.2, speedInc: 0.15, maxLives: 4 },
-            { name: "Thường", initialSpeed: 3.0, speedInc: 0.25, maxLives: 3 },
-            { name: "Khó", initialSpeed: 4.2, speedInc: 0.35, maxLives: 2 }
+            { name: "Dễ", initialSpeed: 2.5, spawnRate: 35, maxLives: 4 },
+            { name: "Thường", initialSpeed: 3.3, spawnRate: 25, maxLives: 3 },
+            { name: "Khó", initialSpeed: 4.2, spawnRate: 18, maxLives: 2 }
         ];
         let currentDiff = 1;
 
-        // Giỏ hứng
         let basket = {
             width: 75,
-            height: 25,
+            height: 24,
             x: 142.5,
             y: 465,
-            speed: 7
+            speed: 7.5
         };
 
-        // Vật thể rơi (Táo đỏ & Sâu)
-        let apples = [];
+        let items = [];
+        let particles = [];
         let score = 0;
         let highScore = 0;
         let lives = 3;
         let frameCount = 0;
 
-        // Điều khiển phím
+        // Trạng thái Nam Châm
+        let magnetTimer = 0;
+
         let leftPressed = false;
         let rightPressed = false;
 
-        // Âm thanh Web Audio API
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         function playSound(type) {
             if (audioCtx.state === 'suspended') audioCtx.resume();
@@ -118,18 +119,26 @@ game_html = """
 
             if (type === 'catch') {
                 osc.type = 'sine';
-                osc.frequency.setValueAtTime(523, audioCtx.currentTime); // C5
-                osc.frequency.setValueAtTime(659, audioCtx.currentTime + 0.08); // E5
+                osc.frequency.setValueAtTime(523, audioCtx.currentTime);
+                osc.frequency.setValueAtTime(659, audioCtx.currentTime + 0.08);
                 gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
                 gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
                 osc.start(); osc.stop(audioCtx.currentTime + 0.15);
-            } else if (type === 'miss') {
+            } else if (type === 'magnet') {
                 osc.type = 'triangle';
-                osc.frequency.setValueAtTime(220, audioCtx.currentTime);
-                osc.frequency.linearRampToValueAtTime(110, audioCtx.currentTime + 0.2);
+                osc.frequency.setValueAtTime(300, audioCtx.currentTime);
+                osc.frequency.linearRampToValueAtTime(800, audioCtx.currentTime + 0.25);
                 gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
-                gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
-                osc.start(); osc.stop(audioCtx.currentTime + 0.2);
+                gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.25);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.25);
+            } else if (type === 'explosion') {
+                // Âm thanh Bom nổ trầm êm
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(180, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.3);
+                gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.3);
             }
         }
 
@@ -142,7 +151,6 @@ game_html = """
             if (gameState === "MENU") draw();
         }
 
-        // Sự kiện bàn phím
         document.addEventListener("keydown", (e) => {
             if (e.code === "ArrowLeft" || e.code === "KeyA") leftPressed = true;
             if (e.code === "ArrowRight" || e.code === "KeyD") rightPressed = true;
@@ -156,14 +164,12 @@ game_html = """
             if (e.code === "ArrowRight" || e.code === "KeyD") rightPressed = false;
         });
 
-        // Sự kiện chuột & Cảm ứng di động
         function handlePointerMove(e) {
             let rect = cvs.getBoundingClientRect();
             let clientX = e.clientX || (e.touches && e.touches[0].clientX);
             if (clientX) {
                 let touchX = clientX - rect.left;
                 basket.x = touchX - basket.width / 2;
-                // Giữ giỏ trong khung hình
                 if (basket.x < 0) basket.x = 0;
                 if (basket.x + basket.width > cvs.width) basket.x = cvs.width - basket.width;
             }
@@ -175,137 +181,200 @@ game_html = """
             handlePointerMove(e);
         }, { passive: false });
 
-        cvs.addEventListener("click", () => {
-            if (gameState !== "PLAYING") startGame();
-        });
+        cvs.addEventListener("click", () => { if (gameState !== "PLAYING") startGame(); });
         cvs.addEventListener("touchstart", (e) => {
-            if (gameState !== "PLAYING") {
-                e.preventDefault();
-                startGame();
-            }
+            if (gameState !== "PLAYING") { e.preventDefault(); startGame(); }
         }, { passive: false });
 
         function startGame() {
             gameState = "PLAYING";
             score = 0;
             lives = difficulties[currentDiff].maxLives;
-            apples = [];
+            items = [];
+            particles = [];
             frameCount = 0;
+            magnetTimer = 0;
             basket.x = (cvs.width - basket.width) / 2;
         }
 
-        function spawnApple() {
-            let diffConfig = difficulties[currentDiff];
-            let currentSpeed = diffConfig.initialSpeed + (score * diffConfig.speedInc * 0.1);
-            let isBomb = Math.random() < 0.18; // 18% cơ hội ra Táo Độc (Màu Xám/Sâu)
+        function createExplosion(x, y) {
+            // Tạo 15 mảnh văng nhỏ khi bom nổ
+            for (let i = 0; i < 15; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 8,
+                    vy: (Math.random() - 0.5) * 8,
+                    color: Math.random() < 0.5 ? "#ff4d4d" : "#ff9900",
+                    size: Math.random() * 5 + 3,
+                    life: 20
+                });
+            }
+        }
 
-            apples.push({
+        function spawnItem() {
+            let diffConfig = difficulties[currentDiff];
+            let currentSpeed = diffConfig.initialSpeed + (score * 0.02);
+            let rand = Math.random();
+
+            let type = "APPLE"; // Mặc định là Táo đỏ
+            if (rand < 0.20) type = "BOMB";      // 20% ra Bom
+            else if (rand < 0.26) type = "MAGNET"; // 6% ra Nam Châm
+
+            items.push({
                 x: Math.random() * (cvs.width - 24) + 12,
                 y: -15,
                 radius: 12,
                 speed: currentSpeed,
-                isBomb: isBomb
+                type: type
             });
         }
 
         function drawBasket() {
-            // Thân giỏ đan tre
-            ctx.fillStyle = "#8B4513";
+            ctx.fillStyle = magnetTimer > 0 ? "#4a90e2" : "#8B4513";
             ctx.beginPath();
             ctx.roundRect(basket.x, basket.y, basket.width, basket.height, 6);
             ctx.fill();
             ctx.lineWidth = 2;
-            ctx.strokeStyle = "#5c2c09";
+            ctx.strokeStyle = magnetTimer > 0 ? "#1f4ba8" : "#5c2c09";
             ctx.stroke();
 
-            // Sọc trang trí trên giỏ
-            ctx.fillStyle = "#A0522D";
-            ctx.fillRect(basket.x + 5, basket.y + 5, basket.width - 10, 4);
-            ctx.fillRect(basket.x + 5, basket.y + 14, basket.width - 10, 4);
+            // Vẽ ký hiệu Nam châm trên giỏ nếu đang bật hiệu ứng
+            if (magnetTimer > 0) {
+                ctx.fillStyle = "#FFF";
+                ctx.font = "bold 13px sans-serif";
+                ctx.textAlign = "center";
+                ctx.fillText("🧲 MAGNET", basket.x + basket.width / 2, basket.y + 17);
+            } else {
+                ctx.fillStyle = "#A0522D";
+                ctx.fillRect(basket.x + 5, basket.y + 5, basket.width - 10, 4);
+                ctx.fillRect(basket.x + 5, basket.y + 14, basket.width - 10, 4);
+            }
         }
 
-        function drawApples() {
-            for (let i = 0; i < apples.length; i++) {
-                let a = apples[i];
+        function drawItems() {
+            for (let i = 0; i < items.length; i++) {
+                let item = items[i];
+
+                // Hiệu ứng Nam Châm hút Táo đỏ về giỏ
+                if (magnetTimer > 0 && item.type === "APPLE") {
+                    let basketCenterX = basket.x + basket.width / 2;
+                    let dx = basketCenterX - item.x;
+                    item.x += dx * 0.08; // Kéo dần táo theo trục X
+                }
 
                 ctx.beginPath();
-                ctx.arc(a.x, a.y, a.radius, 0, Math.PI * 2);
 
-                if (a.isBomb) {
-                    // Táo Độc (Trừ mạng)
-                    ctx.fillStyle = "#555";
+                if (item.type === "BOMB") {
+                    // Vẽ Quả Bom
+                    ctx.arc(item.x, item.y, item.radius, 0, Math.PI * 2);
+                    ctx.fillStyle = "#333";
                     ctx.fill();
-                    ctx.strokeStyle = "#111";
+                    ctx.lineWidth = 1.5;
+                    ctx.strokeStyle = "#000";
                     ctx.stroke();
 
-                    // X trên táo độc
-                    ctx.strokeStyle = "#ff4d4d";
-                    ctx.lineWidth = 2;
+                    // Kíp nổ
+                    ctx.strokeStyle = "#ff9900";
                     ctx.beginPath();
-                    ctx.moveTo(a.x - 4, a.y - 4); ctx.lineTo(a.x + 4, a.y + 4);
-                    ctx.moveTo(a.x + 4, a.y - 4); ctx.lineTo(a.x - 4, a.y + 4);
+                    ctx.moveTo(item.x, item.y - item.radius);
+                    ctx.lineTo(item.x + 4, item.y - item.radius - 5);
                     ctx.stroke();
+
+                } else if (item.type === "MAGNET") {
+                    // Vẽ Vật phẩm Nam Châm
+                    ctx.fillStyle = "#ff3333";
+                    ctx.font = "18px sans-serif";
+                    ctx.textAlign = "center";
+                    ctx.fillText("🧲", item.x, item.y + 6);
+
                 } else {
-                    // Táo Đỏ Thường (Cộng điểm)
+                    // Vẽ Táo Đỏ
+                    ctx.arc(item.x, item.y, item.radius, 0, Math.PI * 2);
                     ctx.fillStyle = "#ff3333";
                     ctx.fill();
                     ctx.lineWidth = 1.5;
                     ctx.strokeStyle = "#b30000";
                     ctx.stroke();
 
-                    // Cuống táo & lá xanh
+                    // Lá xanh
                     ctx.fillStyle = "#2e8b57";
                     ctx.beginPath();
-                    ctx.ellipse(a.x + 3, a.y - 12, 4, 2, Math.PI / 4, 0, Math.PI * 2);
+                    ctx.ellipse(item.x + 3, item.y - 12, 4, 2, Math.PI / 4, 0, Math.PI * 2);
                     ctx.fill();
                 }
 
                 if (gameState === "PLAYING") {
-                    a.y += a.speed;
+                    item.y += item.speed;
                 }
 
-                // Xử lý Hứng thành công
+                // Xử lý Hứng vật phẩm
                 if (
-                    a.y + a.radius >= basket.y &&
-                    a.y - a.radius <= basket.y + basket.height &&
-                    a.x >= basket.x - 5 &&
-                    a.x <= basket.x + basket.width + 5
+                    item.y + item.radius >= basket.y &&
+                    item.y - item.radius <= basket.y + basket.height &&
+                    item.x >= basket.x - 5 &&
+                    item.x <= basket.x + basket.width + 5
                 ) {
-                    if (a.isBomb) {
-                        playSound('miss');
+                    if (item.type === "BOMB") {
+                        playSound('explosion');
+                        createExplosion(item.x, item.y);
                         lives--;
                         if (lives <= 0) gameState = "GAMEOVER";
-                    } else {
+
+                    } else if (item.type === "MAGNET") {
+                        playSound('magnet');
+                        magnetTimer = 300; // Khởi tạo 5 giây nam châm (60fps * 5)
+
+                    } else { // Táo đỏ
                         playSound('catch');
                         score += 10;
                         if (score > highScore) highScore = score;
                     }
-                    apples.splice(i, 1);
+
+                    items.splice(i, 1);
                     i--;
                     continue;
                 }
 
-                // Rơi xuống đất
-                if (a.y - a.radius > cvs.height) {
-                    if (!a.isBomb) {
-                        playSound('miss');
+                // Rơi quá màn hình
+                if (item.y - item.radius > cvs.height) {
+                    if (item.type === "APPLE" && magnetTimer <= 0) {
                         lives--;
                         if (lives <= 0) gameState = "GAMEOVER";
                     }
-                    apples.splice(i, 1);
+                    items.splice(i, 1);
                     i--;
                 }
             }
 
-            // Sinh táo mới theo định kỳ
-            let spawnInterval = Math.max(35, 75 - Math.floor(score / 30));
-            if (gameState === "PLAYING" && frameCount % spawnInterval === 0) {
-                spawnApple();
+            // Sinh vật phẩm dồn dập hơn
+            let rate = difficulties[currentDiff].spawnRate;
+            if (gameState === "PLAYING" && frameCount % rate === 0) {
+                spawnItem();
+            }
+        }
+
+        function updateParticles() {
+            for (let i = 0; i < particles.length; i++) {
+                let p = particles[i];
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fill();
+
+                p.x += p.vx;
+                p.y += p.vy;
+                p.life--;
+
+                if (p.life <= 0) {
+                    particles.splice(i, 1);
+                    i--;
+                }
             }
         }
 
         function drawUI() {
-            // Mạng sống (Trái tim)
+            // Mạng sống
             ctx.fillStyle = "#ff4d4d";
             ctx.font = "bold 18px sans-serif";
             ctx.textAlign = "left";
@@ -322,15 +391,16 @@ game_html = """
         function draw() {
             ctx.clearRect(0, 0, cvs.width, cvs.height);
 
-            // Di chuyển giỏ bằng phím
             if (gameState === "PLAYING") {
                 if (leftPressed && basket.x > 0) basket.x -= basket.speed;
                 if (rightPressed && basket.x + basket.width < cvs.width) basket.x += basket.speed;
                 frameCount++;
+                if (magnetTimer > 0) magnetTimer--;
             }
 
             drawBasket();
-            drawApples();
+            drawItems();
+            updateParticles();
             drawUI();
 
             if (gameState === "MENU") {
@@ -338,11 +408,11 @@ game_html = """
                 ctx.fillRect(0, 0, cvs.width, cvs.height);
 
                 ctx.fillStyle = "#FFF";
-                ctx.font = "bold 28px sans-serif";
+                ctx.font = "bold 26px sans-serif";
                 ctx.textAlign = "center";
                 ctx.shadowColor = "rgba(0,0,0,0.8)";
                 ctx.shadowBlur = 6;
-                ctx.fillText("HỨNG TÁO MAY MẮN", cvs.width / 2, 160);
+                ctx.fillText("HỨNG TÁO: BOM & NAM CHÂM", cvs.width / 2, 160);
 
                 ctx.font = "16px sans-serif";
                 ctx.fillText(`Chế độ: ${difficulties[currentDiff].name}`, cvs.width / 2, 205);
