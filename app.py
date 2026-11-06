@@ -2,10 +2,10 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 st.set_page_config(
-    page_title="Flappy Bird Pro - Âm Thanh Nhẹ Nhàng", page_icon="🐦", layout="centered"
+    page_title="Flappy Bird Pro - Đã Sửa Lỗi Ống", page_icon="🐦", layout="centered"
 )
 
-st.title("🐦 Flappy Bird - Đã Giảm Âm Lượng Tiếng Thua")
+st.title("🐦 Flappy Bird - Đã Sửa Lỗi Khoảng Trống Ống")
 st.caption(
     "💡 **Điện thoại / Máy tính:** Chạm tay hoặc Click chuột trực tiếp vào màn"
     " hình game để bay / bắt đầu!"
@@ -88,11 +88,12 @@ game_html = """
 
         let gameState = "MENU"; // MENU, PLAYING, GAMEOVER
 
+        // Cấu hình chuẩn cho 4 chế độ với khoảng hở (gap) thoáng rộng
         const difficulties = [
-            { name: "Dễ", gravity: 0.22, jump: -4.8, speed: 1.6, gap: 185, interval: 130 },
-            { name: "Thường", gravity: 0.26, jump: -5.2, speed: 1.9, gap: 170, interval: 115 },
-            { name: "Khó", gravity: 0.30, jump: -5.6, speed: 2.3, gap: 155, interval: 100 },
-            { name: "Siêu Khó", gravity: 0.34, jump: -6.0, speed: 2.7, gap: 140, interval: 90 }
+            { name: "Dễ", gravity: 0.22, jump: -4.8, speed: 1.6, gap: 175, interval: 130 },
+            { name: "Thường", gravity: 0.26, jump: -5.2, speed: 1.9, gap: 160, interval: 115 },
+            { name: "Khó", gravity: 0.30, jump: -5.6, speed: 2.3, gap: 145, interval: 100 },
+            { name: "Siêu Khó", gravity: 0.34, jump: -6.0, speed: 2.7, gap: 130, interval: 90 }
         ];
         let currentDiffIndex = 1;
 
@@ -135,7 +136,6 @@ game_html = """
                 gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
                 osc.start(); osc.stop(audioCtx.currentTime + 0.2);
             } else if (type === 'hit') {
-                // Đổi sang âm trầm, êm dịu và nhỏ hơn để không bị ồn
                 osc.type = 'sine';
                 osc.frequency.setValueAtTime(150, audioCtx.currentTime);
                 osc.frequency.exponentialRampToValueAtTime(60, audioCtx.currentTime + 0.15);
@@ -182,6 +182,20 @@ game_html = """
             }
         }
 
+        function createNewPipe() {
+            let diff = difficulties[currentDiffIndex];
+            // Giới hạn chiều cao ống trên an toàn tuyệt đối, không bị kẹt hay bịt kín màn hình
+            let minTop = 50;
+            let maxTop = cvs.height - diff.gap - 80;
+            let topHeight = Math.floor(Math.random() * (maxTop - minTop + 1)) + minTop;
+            
+            pipes.push({
+                x: cvs.width,
+                top: topHeight,
+                passed: false
+            });
+        }
+
         function startGame() {
             gameState = "PLAYING";
             bird.y = 220;
@@ -189,12 +203,7 @@ game_html = """
             pipes = [];
             score = 0;
             frameCount = 0;
-            let diff = difficulties[currentDiffIndex];
-            pipes.push({
-                x: cvs.width,
-                top: Math.floor(Math.random() * (cvs.height - diff.gap - 120)) + 40,
-                passed: false
-            });
+            createNewPipe();
         }
 
         function drawBackground() {
@@ -297,6 +306,7 @@ game_html = """
                 ctx.strokeStyle = pipeBorder;
                 ctx.lineWidth = 2;
 
+                // Ống trên
                 if (topHeight > 20) {
                     ctx.fillRect(p.x, 0, pipeWidth, topHeight - 20);
                     ctx.strokeRect(p.x, 0, pipeWidth, topHeight - 20);
@@ -304,6 +314,7 @@ game_html = """
                 ctx.fillRect(p.x - 3, topHeight - 20, pipeWidth + 6, 20);
                 ctx.strokeRect(p.x - 3, topHeight - 20, pipeWidth + 6, 20);
 
+                // Ống dưới
                 ctx.fillRect(p.x - 3, bottomY, pipeWidth + 6, 20);
                 ctx.strokeRect(p.x - 3, bottomY, pipeWidth + 6, 20);
                 if (bottomHeight > 20) {
@@ -322,6 +333,7 @@ game_html = """
                     p.passed = true;
                 }
 
+                // Va chạm chuẩn xác
                 if (
                     bird.x + bird.radius - 3 > p.x && 
                     bird.x - bird.radius + 3 < p.x + pipeWidth &&
@@ -337,11 +349,7 @@ game_html = """
             }
 
             if (gameState === "PLAYING" && frameCount % diff.interval === 0) {
-                pipes.push({
-                    x: cvs.width,
-                    top: Math.floor(Math.random() * (cvs.height - diff.gap - 120)) + 40,
-                    passed: false
-                });
+                createNewPipe();
             }
         }
 
